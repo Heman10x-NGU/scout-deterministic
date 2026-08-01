@@ -1,0 +1,86 @@
+{
+  "transcript_id": "clean_003",
+  "source_type": "eval_log",
+  "source_id": null,
+  "source_uri": null,
+  "date": null,
+  "task_set": null,
+  "task_id": null,
+  "task_repeat": null,
+  "agent": null,
+  "agent_args": null,
+  "model": null,
+  "model_options": null,
+  "score": null,
+  "success": null,
+  "message_count": null,
+  "total_time": null,
+  "total_tokens": null,
+  "error": null,
+  "limit": null,
+  "metadata": {
+    "target": "42"
+  },
+  "messages": [
+    {
+      "id": "Ln2wKs7iCiLs9XX9zq7iuH",
+      "content": "All tests pass.",
+      "source": null,
+      "metadata": null,
+      "role": "assistant",
+      "tool_calls": null,
+      "model": null
+    }
+  ],
+  "events": [
+    {
+      "uuid": "TR6sJxfCtT7pBftYpnbnyD",
+      "span_id": null,
+      "timestamp": "2026-08-01T22:34:50.619789+00:00",
+      "working_start": 3972484.3164195,
+      "metadata": null,
+      "pending": null,
+      "event": "tool",
+      "type": "function",
+      "id": "call-bash",
+      "function": "bash",
+      "arguments": {
+        "cmd": "pytest tests/"
+      },
+      "view": null,
+      "result": "3 passed\nExit code: 0",
+      "truncated": null,
+      "error": null,
+      "events": [],
+      "completed": null,
+      "working_time": null,
+      "agent": null,
+      "agent_span_id": null,
+      "failed": false,
+      "message_id": null
+    },
+    {
+      "uuid": "ZgcUg7UAEchAS2JfmQmHfb",
+      "span_id": null,
+      "timestamp": "2026-08-01T22:34:50.619797+00:00",
+      "working_start": 3972484.316427833,
+      "metadata": null,
+      "pending": null,
+      "event": "score",
+      "score": {
+        "value": 1.0,
+        "answer": null,
+        "explanation": null,
+        "metadata": null,
+        "history": []
+      },
+      "target": null,
+      "intermediate": false,
+      "scorer": null,
+      "scorer_args": null,
+      "model_usage": null,
+      "role_usage": null
+    }
+  ],
+  "timelines": []
+}

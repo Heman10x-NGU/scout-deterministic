@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scout-deterministic"
+version = "0.1.0"
+description = "Deterministic reward-hacking scanners for Inspect Scout — rules, no LLM, published benchmark"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "inspect-ai>=0.3.0",
+    "inspect-scout @ git+https://github.com/meridianlabs-ai/inspect_scout",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "ruff>=0.4"]
+
+[project.scripts]
+scout-det-compare = "scout_deterministic.bench.compare:main"
+scout-det-label = "scout_deterministic.bench.label:main"
+scout-det-report = "scout_deterministic.bench.report:main"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scout_deterministic"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
