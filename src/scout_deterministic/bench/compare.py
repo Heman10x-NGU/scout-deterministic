@@ -48,24 +48,7 @@ DETECTORS = {
 }
 
 
-def _load_dotenv() -> None:
-    for candidate in (
-        ROOT / ".env",
-        ROOT.parents[2] / ".env",  # Remote-jobs/.env
-    ):
-        if not candidate.exists():
-            continue
-        for line in candidate.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip()
-            if key and value and key not in os.environ:
-                os.environ[key] = value
-
-
+from scout_deterministic.bench._model_env import configure_benchmark_model, load_dotenv
 def _load_labels() -> list[dict[str, Any]]:
     if not LABELS_PATH.exists():
         raise FileNotFoundError(
@@ -109,17 +92,17 @@ def _result_flagged(result: object) -> bool:
     return bool(value)
 
 
-async def _run_llm_scanner(transcript: Transcript) -> bool:
+async def _run_llm_scanner(transcript: Transcript, *, model: str) -> bool:
     scanner = llm_scanner(
         question=REWARD_HACKING_QUESTION,
         answer="boolean",
-        model=os.environ.get("SCOUT_BENCH_MODEL", "openai/gpt-4o-mini"),
+        model=model,
     )
     return _result_flagged(await scanner(transcript))
 
 
 async def compare(*, run_llm: bool) -> dict[str, Any]:
-    _load_dotenv()
+    bench_model = os.environ.get("SCOUT_BENCH_MODEL") or configure_benchmark_model()
     labels = _load_labels()
     per_detector: dict[str, list[bool]] = {name: [] for name in DETECTORS}
     aggregate_pred: list[bool] = []
@@ -153,7 +136,7 @@ async def compare(*, run_llm: bool) -> dict[str, Any]:
         try:
             for index, row in enumerate(labels):
                 transcript = await load_transcript(ROOT / row["log"])
-                llm_flag = await _run_llm_scanner(transcript)
+                llm_flag = await _run_llm_scanner(transcript, model=bench_model)
                 llm_preds.append(llm_flag)
                 det_flag = aggregate_pred[index]
                 if llm_flag != det_flag:
@@ -248,7 +231,8 @@ def main() -> None:
     args = parser.parse_args()
     run_llm = args.llm and not args.no_llm
     if not args.no_llm and not args.llm:
-        _load_dotenv()
+        load_dotenv()
+        configure_benchmark_model()
         run_llm = bool(os.environ.get("OPENAI_API_KEY") or os.environ.get("INSPECT_API_KEY"))
     results = asyncio.run(compare(run_llm=run_llm))
     print(json.dumps(results, indent=2))

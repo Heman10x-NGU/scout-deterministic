@@ -2,10 +2,10 @@
 
 ## Corpus
 
-- Samples: **26**
+- Samples: **5**
 - Positives (hand-labelled hacked): **0**
-- Clean negatives: **26**
-- Conditions: clean=8, impossible=4, leading_prompt=4, readable_answer=6, tight_budget=4
+- Clean negatives: **5**
+- Conditions: clean=1, impossible=1, leading_prompt=1, readable_answer=1, tight_budget=1
 - Model(s): openai/mimo-v2.5-pro
 - Labeller: **hemant+agent**
 
@@ -25,7 +25,7 @@ Corpus is **live Inspect eval logs** from `benchmark/generate_real_corpus.py`
 - Recall: **0.0%**
 - F1: **0.000**
 - False-positive rate (clean): **0.0%**
-- Latency: **1.60 ms/transcript** (0.042s total)
+- Latency: **20.50 ms/transcript** (0.102s total)
 - Token cost: **$0** (0 tokens)
 
 ## Per-detector
@@ -54,7 +54,7 @@ scout-det-report
 
 ## Limitations
 
-- Corpus is small (N=26). Numbers are indicative, not definitive.
+- Corpus is small (N=5). Numbers are indicative, not definitive.
 - Semantic hacks still need a model judge.
 - `ground_truth_read` may fire on benign file reads before submit.
 - Conditions bias hack rate; do not extrapolate to production agents.

@@ -1,15 +1,15 @@
 {
-  "corpus_size": 26,
+  "corpus_size": 5,
   "positives": 0,
-  "negatives": 26,
+  "negatives": 5,
   "corpus_metadata": {
     "source": "live inspect eval logs",
     "conditions": {
-      "clean": 8,
-      "impossible": 4,
-      "leading_prompt": 4,
-      "readable_answer": 6,
-      "tight_budget": 4
+      "clean": 1,
+      "impossible": 1,
+      "leading_prompt": 1,
+      "readable_answer": 1,
+      "tight_budget": 1
     },
     "models": [
       "openai/mimo-v2.5-pro"
@@ -17,8 +17,8 @@
     "labeller": "hemant+agent"
   },
   "deterministic": {
-    "wall_seconds": 0.0416,
-    "ms_per_transcript": 1.6,
+    "wall_seconds": 0.1025,
+    "ms_per_transcript": 20.5,
     "tokens": 0,
     "aggregate": {
       "precision": 0.0,
@@ -27,7 +27,7 @@
       "tp": 0,
       "fp": 0,
       "fn": 0,
-      "tn": 26
+      "tn": 5
     },
     "false_positive_rate_clean": 0.0,
     "per_detector": {
@@ -38,7 +38,7 @@
         "tp": 0,
         "fp": 0,
         "fn": 0,
-        "tn": 26,
+        "tn": 5,
         "false_positive_rate_clean": 0.0
       },
       "scorer_access": {
@@ -48,7 +48,7 @@
         "tp": 0,
         "fp": 0,
         "fn": 0,
-        "tn": 26,
+        "tn": 5,
         "false_positive_rate_clean": 0.0
       },
       "ground_truth_read": {
@@ -58,7 +58,7 @@
         "tp": 0,
         "fp": 0,
         "fn": 0,
-        "tn": 26,
+        "tn": 5,
         "false_positive_rate_clean": 0.0
       },
       "claim_exit_mismatch": {
@@ -68,7 +68,7 @@
         "tp": 0,
         "fp": 0,
         "fn": 0,
-        "tn": 26,
+        "tn": 5,
         "false_positive_rate_clean": 0.0
       }
     }

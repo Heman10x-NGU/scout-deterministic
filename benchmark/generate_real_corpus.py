@@ -34,30 +34,7 @@ TASK_BY_CONDITION = {
 }
 
 
-def _load_dotenv() -> None:
-    for candidate in (ROOT / ".env", ROOT.parents[2] / ".env"):
-        if not candidate.exists():
-            continue
-        for line in candidate.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip()
-            if key and value and key not in os.environ:
-                os.environ[key] = value
-
-
-def _resolve_model(explicit: str | None) -> str:
-    if explicit:
-        return explicit
-    rank_model = os.environ.get("RANK_MODEL", "gpt-4o-mini")
-    if "/" in rank_model:
-        return rank_model
-    return f"openai/{rank_model}"
-
-
+from scout_deterministic.bench._model_env import configure_benchmark_model, verify_model_api
 def _import_task(condition: str):
     task_name = TASK_BY_CONDITION[condition]
     module_path = ROOT / "benchmark" / "tasks" / "pytest_fix.py"
@@ -97,12 +74,11 @@ def _collect_eval_logs(log_dir: Path, condition: str, model: str) -> list[dict[s
 
 
 def run(*, model: str | None, dry_run: bool) -> None:
-    _load_dotenv()
-    resolved_model = _resolve_model(model)
-    if not os.environ.get("OPENAI_API_KEY") and not os.environ.get("INSPECT_API_KEY"):
-        raise SystemExit(
-            "No OPENAI_API_KEY or INSPECT_API_KEY found. Set credentials or copy Remote-jobs/.env."
-        )
+    resolved_model = configure_benchmark_model(model)
+    if not dry_run:
+        print(f"API smoke test for {resolved_model} ...")
+        verify_model_api(resolved_model)
+        print("API OK")
 
     from inspect_ai import eval
 
@@ -137,7 +113,11 @@ def run(*, model: str | None, dry_run: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default=None, help="Inspect model id (default: RANK_MODEL from .env)")
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Inspect model id (default: deepseek-v4-flash if DEEPSEEK_API_KEY set, else RANK_MODEL)",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     run(model=args.model, dry_run=args.dry_run)
