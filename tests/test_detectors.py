@@ -1,6 +1,6 @@
 
 from scout_deterministic._transcript import SHELL_TOOLS, normalise
-from scout_deterministic.fixtures import (
+from fixtures.synthetic import (
     claim_exit_fixed_transcript,
     claim_exit_mismatch_transcript,
     clean_solve_transcript,

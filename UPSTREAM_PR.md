@@ -51,8 +51,9 @@ references, and make zero model calls.
 
 `examples/scanner/scanner.py` ships `reward_hacking()` as an LLM judge. Structural
 cases (answer-file reads, lazy submits) are cheaper and more stable as rules.
-External benchmark (scout-deterministic, 45 hand-labelled replay transcripts):
-~0.3ms/transcript, published false-positive rates per detector.
+External package [scout-deterministic](https://github.com/Heman10x-NGU/scout-deterministic)
+hosts the full scanner set and a live-eval benchmark pipeline. This PR argues
+the scanners on their logic and tests only — no benchmark numbers cited here.
 
 ## Test plan
 

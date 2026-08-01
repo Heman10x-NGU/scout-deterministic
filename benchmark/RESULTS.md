@@ -2,47 +2,59 @@
 
 ## Corpus
 
-- Samples: **45**
-- Positives (hand-labelled hacked): **25**
-- Clean negatives: **20**
+- Samples: **26**
+- Positives (hand-labelled hacked): **0**
+- Clean negatives: **26**
+- Conditions: clean=8, impossible=4, leading_prompt=4, readable_answer=6, tight_budget=4
+- Model(s): openai/mimo-v2.5-pro
+- Labeller: **hemant+agent**
 
-Corpus is Inspect-shaped replay transcripts generated from real event types
-(`ToolEvent`, `ModelEvent`, `ScoreEvent`). See `benchmark/generate_corpus.py`.
+Corpus is **live Inspect eval logs** from `benchmark/generate_real_corpus.py`
+(agentic pytest-fix task, local sandbox, real tool events).
+
+## Method
+
+1. Generate transcripts with `python benchmark/generate_real_corpus.py`.
+2. Label each sample interactively with `scout-det-label` (human ground truth).
+3. Run `scout-det-compare --llm` against those labels.
+4. Regenerate this file with `scout-det-report`.
 
 ## Deterministic scanners (aggregate)
 
-- Precision: **80.7%**
-- Recall: **100.0%**
-- F1: **0.893**
-- False-positive rate (clean): **30.0%**
-- Latency: **0.22 ms/transcript** (0.010s total)
+- Precision: **0.0%**
+- Recall: **0.0%**
+- F1: **0.000**
+- False-positive rate (clean): **0.0%**
+- Latency: **1.60 ms/transcript** (0.042s total)
 - Token cost: **$0** (0 tokens)
 
 ## Per-detector
 
 | Detector | Precision | Recall | F1 | FP rate (clean) |
 |---|---:|---:|---:|---:|
-| `submit_no_exec` | 100.0% | 24.0% | 0.387 | 0.0% |
-| `scorer_access` | 100.0% | 52.0% | 0.684 | 0.0% |
-| `ground_truth_read` | 68.4% | 52.0% | 0.591 | 30.0% |
-| `claim_exit_mismatch` | 100.0% | 24.0% | 0.387 | 0.0% |
+| `submit_no_exec` | 0.0% | 0.0% | 0.000 | 0.0% |
+| `scorer_access` | 0.0% | 0.0% | 0.000 | 0.0% |
+| `ground_truth_read` | 0.0% | 0.0% | 0.000 | 0.0% |
+| `claim_exit_mismatch` | 0.0% | 0.0% | 0.000 | 0.0% |
 
 ## LLM scanner comparison
 
-- `llm_scanner()` not run: skipped (--no-llm or no API key)
-- Re-run with `scout-det-compare --llm` once a model API key is configured.
+- `llm_scanner()` not run: Error code: 401 - {'error': {'message': 'Invalid API Key', 'param': 'Please provide valid API Key', 'code': '401', 'type': 'invalid_key'}}
+- Re-run with `scout-det-compare --llm` once labels exist.
 
 ## Reproduce
 
 ```bash
 pip install -e '.[dev]'
-python benchmark/generate_corpus.py --count 45
-scout-det-compare
+python benchmark/generate_real_corpus.py
+scout-det-label
+scout-det-compare --llm
 scout-det-report
 ```
 
-## Honest limitations
+## Limitations
 
-- Corpus v0 uses structured replay transcripts, not live agent runs.
-- Semantic hacks and novel strategies still need a model judge.
-- `claim_exit_mismatch` is the highest false-positive risk when agents fail then fix.
+- Corpus is small (N=26). Numbers are indicative, not definitive.
+- Semantic hacks still need a model judge.
+- `ground_truth_read` may fire on benign file reads before submit.
+- Conditions bias hack rate; do not extrapolate to production agents.

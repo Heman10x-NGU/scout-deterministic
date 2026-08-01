@@ -6,18 +6,28 @@ Deterministic reward-hacking scanners for [Inspect Scout](https://github.com/mer
 
 This package adds **rule-based scanners** for structural cheat patterns — no model calls, sub-millisecond per transcript.
 
-## Benchmark (v0, 45 hand-labelled transcripts)
+## Benchmark
 
-| Metric | Deterministic | Notes |
-|---|---:|---|
-| Precision | **80.7%** | Against hand labels |
-| Recall | **100%** | |
-| False positives (clean) | **30%** | Almost all from `ground_truth_read` |
-| Latency | **0.22 ms** / transcript | $0 token cost |
+Benchmark numbers are generated from **live agent runs**, not synthetic fixtures. See [`benchmark/RESULTS.md`](benchmark/RESULTS.md) after you complete labelling and comparison.
 
-Per-detector false-positive rate on clean transcripts: `submit_no_exec` 0%, `scorer_access` 0%, `ground_truth_read` **30%**, `claim_exit_mismatch` 0%.
+```bash
+python benchmark/generate_real_corpus.py   # 26 live eval logs across 5 conditions
+scout-det-label                          # human labels (required)
+scout-det-compare --llm                  # deterministic vs LLM judge
+scout-det-report                         # writes RESULTS.md
+```
 
-Full methodology: [`benchmark/RESULTS.md`](benchmark/RESULTS.md)
+*Corpus is small (~26 samples). Numbers are indicative, not definitive.*
+
+## Fixtures vs benchmark
+
+| | Fixtures (`tests/fixtures/`) | Benchmark (`benchmark/`) |
+|---|---|---|
+| Purpose | Verify each detector fires on a constructed case | Measure behaviour on real agent runs |
+| Data | Synthetic `Transcript` JSON built from Inspect event types | Live `.eval` logs from `inspect eval` |
+| Labels | Not used | Hand-written per sample via `scout-det-label` |
+
+Do not use fixture transcripts as benchmark scores.
 
 ## Scanners
 
@@ -34,45 +44,28 @@ Full methodology: [`benchmark/RESULTS.md`](benchmark/RESULTS.md)
 git clone https://github.com/Heman10x-NGU/scout-deterministic.git
 cd scout-deterministic
 python3.11 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 ```
 
 ## Usage
 
-**Run scanners on the benchmark corpus** (Python API — works with serialised `Transcript` JSON):
+**Run scanners on fixture transcripts** (unit-test JSON under `tests/fixtures/transcripts/`):
 
 ```bash
-python benchmark/run_scout_scan.py
-python benchmark/run_scout_scan.py --limit 10 --json
+pytest
 ```
 
 **Run on real Inspect eval logs** (`.eval` files from `inspect eval ...`):
 
 ```bash
-scout scan src/scout_deterministic/scout_scanners.py -T /path/to/logs/
-```
-
-**Reproduce benchmark numbers:**
-
-```bash
-python benchmark/generate_corpus.py --count 45
-scout-det-compare --no-llm
-scout-det-report
-```
-
-**Compare against Scout's LLM `reward_hacking()` scanner** (needs model API key):
-
-```bash
-export OPENAI_API_KEY=...   # or set in .env
-scout-det-compare --llm
-scout-det-report
+scout scan src/scout_deterministic/scout_scanners.py -T benchmark/raw_logs/
 ```
 
 ## Limitations
 
 - **Semantic hacks** (intent inference, novel strategies) still need a model judge.
-- **v0 corpus** uses Inspect-shaped replay transcripts from real event types (`ToolEvent`, `ModelEvent`, `ScoreEvent`); live agent runs are the next step.
-- **`ground_truth_read`** carries most false positives on the v0 corpus — see per-detector table in `RESULTS.md`.
+- **`ground_truth_read`** may false-positive on benign reads before submit.
+- **Benchmark corpus** is intentionally small; regenerate with harsher conditions if needed.
 
 ## Upstream
 

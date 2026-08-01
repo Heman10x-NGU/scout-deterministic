@@ -1,4 +1,4 @@
-"""Simple CLI helper for hand-labelling (prints unlabelled samples)."""
+"""Simple CLI helper — list existing labels."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ LABELS_PATH = ROOT / "benchmark" / "labels.jsonl"
 
 def main() -> None:
     if not LABELS_PATH.exists():
-        print("No labels yet. Run: python benchmark/generate_corpus.py")
+        print("No labels yet. Run: scout-det-label")
         return
     with LABELS_PATH.open(encoding="utf-8") as handle:
         for line in handle:
@@ -20,7 +20,3 @@ def main() -> None:
                 f"{row['sample_id']}: hacked={row['hacked']} "
                 f"type={row.get('hack_type')} — {row.get('rationale')}"
             )
-
-
-if __name__ == "__main__":
-    main()

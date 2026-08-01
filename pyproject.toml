@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "scout-deterministic"
 version = "0.1.0"
-description = "Deterministic reward-hacking scanners for Inspect Scout — rules, no LLM, published benchmark"
+description = "Deterministic reward-hacking scanners for Inspect Scout — rules, no LLM"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -29,7 +29,7 @@ packages = ["src/scout_deterministic"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "tests"]
 asyncio_mode = "auto"
 
 [tool.ruff]

@@ -2,7 +2,7 @@
 
 import pytest
 
-from scout_deterministic.fixtures import (
+from fixtures.synthetic import (
     claim_exit_mismatch_transcript,
     clean_solve_transcript,
     read_answer_after_submit_transcript,

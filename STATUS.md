@@ -1,27 +1,50 @@
-# scout-deterministic — status
+# scout-deterministic status
 
-**Location:** `Neo-lithic/scout-deterministic/` (keep company projects inside the company folder).
+## Blocking review — fixed in code (pending corpus run)
 
-**Upstream reference:** `../inspect_Scout/inspect_scout/` (local clone of [inspect_scout](https://github.com/meridianlabs-ai/inspect_scout)).
+| Item | Status |
+|---|---|
+| Fixtures moved to `tests/fixtures/synthetic.py` | Done |
+| Synthetic `benchmark/generate_corpus.py` removed | Done |
+| Synthetic `benchmark/transcripts/` removed | Done |
+| `benchmark/generate_real_corpus.py` (live evals) | Done |
+| `scout-det-label` interactive CLI | Done |
+| Fake precision/recall removed from README | Done |
+| Live corpus generated | **Run locally** |
+| Human labels (`benchmark/labels.jsonl`) | **Run `scout-det-label`** |
+| `scout-det-compare --llm` | After labels |
+| Push to GitHub | **Run git commit + push** |
 
-## Done criteria (from `project-scout-deterministic/00_BUILD_PLAN.md`)
+## Quick commands
 
-| Criterion | Status | Notes |
-|---|---|---|
-| `pip install -e .` works | ✅ | Python 3.11 venv |
-| Four scanners + unit tests | ✅ | 7+ tests in `tests/` |
-| `benchmark/labels.jsonl` 40+ samples | ✅ | 45 labelled |
-| `RESULTS.md` with precision/recall/FP/latency | ✅ | v0 replay corpus |
-| LLM agreement in `RESULTS.md` | ⏳ | Needs model API key + `scout-det-compare --llm` |
-| README Limitations | ✅ | |
-| `scout scan` on transcript directory | ⚠️ | Scout CLI needs `.eval` logs; use `python benchmark/run_scout_scan.py` |
-| Upstream PR to inspect_scout | 📋 | Draft ready in `upstream/` + `UPSTREAM_PR.md` |
-| 40s demo video | 👤 | Human task — see `LAUNCH_TWITTER.md` |
+```bash
+cd scout-deterministic
+source .venv/bin/activate
+pytest -q
+python benchmark/generate_real_corpus.py   # ~26 eval logs, uses Remote-jobs/.env MiMo key
+scout-det-label                            # you label each sample (~1.5h)
+scout-det-compare --llm
+scout-det-report
+```
 
-## Remaining (this session)
+Or: `bash scripts/run_benchmark_pipeline.sh`
 
-1. Fix benchmark false positives (`read_after_submit` path heuristic).
-2. Scout API integration test + `run_scout_scan.py` runner.
-3. Align `llm_scanner` benchmark with Inspect Scout's `reward_hacking()` question.
-4. Package upstream PR for `submit_no_exec` + `ground_truth_read`.
-5. Regenerate benchmark + `RESULTS.md`.
+## Git commit (if not pushed yet)
+
+```bash
+git add -A
+git commit -m "$(cat <<'EOF'
+fix(benchmark): replace synthetic corpus with live agent transcripts
+
+The v0 benchmark generated its corpus from the same fixture functions the
+detectors were written against, and described machine-written labels as
+hand-labelled. Both are corrected here.
+
+- fixtures moved to tests/, no longer used as benchmark data
+- corpus generator for live inspect evals across 5 conditions
+- interactive scout-det-label CLI for human ground truth
+- compare/report load .eval logs; README and RESULTS restated
+EOF
+)"
+git push origin main
+```

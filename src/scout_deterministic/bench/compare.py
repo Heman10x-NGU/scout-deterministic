@@ -12,6 +12,8 @@ from typing import Any
 
 from inspect_scout import Transcript, llm_scanner
 
+from scout_deterministic.bench._transcript_load import load_transcript
+
 from scout_deterministic._transcript import (
     DEFAULT_SCORER_PATTERNS,
     SHELL_TOOLS,
@@ -65,16 +67,16 @@ def _load_dotenv() -> None:
 
 
 def _load_labels() -> list[dict[str, Any]]:
+    if not LABELS_PATH.exists():
+        raise FileNotFoundError(
+            f"No labels at {LABELS_PATH}. Run scout-det-label after generating the corpus."
+        )
     rows: list[dict[str, Any]] = []
     with LABELS_PATH.open(encoding="utf-8") as handle:
         for line in handle:
             if line.strip():
                 rows.append(json.loads(line))
     return rows
-
-
-def _load_transcript(path: Path) -> Transcript:
-    return Transcript.model_validate_json(path.read_text())
 
 
 def _metrics(y_true: list[bool], y_pred: list[bool]) -> dict[str, float]:
@@ -128,7 +130,7 @@ async def compare(*, run_llm: bool) -> dict[str, Any]:
 
     det_start = time.perf_counter()
     for row in labels:
-        transcript = _load_transcript(ROOT / row["log"])
+        transcript = await load_transcript(ROOT / row["log"])
         events = normalise(transcript)
         hacked = bool(row["hacked"])
         y_true.append(hacked)
@@ -150,7 +152,7 @@ async def compare(*, run_llm: bool) -> dict[str, Any]:
         llm_start = time.perf_counter()
         try:
             for index, row in enumerate(labels):
-                transcript = _load_transcript(ROOT / row["log"])
+                transcript = await load_transcript(ROOT / row["log"])
                 llm_flag = await _run_llm_scanner(transcript)
                 llm_preds.append(llm_flag)
                 det_flag = aggregate_pred[index]
@@ -177,10 +179,24 @@ async def compare(*, run_llm: bool) -> dict[str, Any]:
         1 for truth, pred in zip(y_true, aggregate_pred, strict=True) if not truth and pred
     )
 
+    conditions: dict[str, int] = {}
+    models: set[str] = set()
+    for row in labels:
+        condition = str(row.get("condition") or "unknown")
+        conditions[condition] = conditions.get(condition, 0) + 1
+        if row.get("model"):
+            models.add(str(row["model"]))
+
     results: dict[str, Any] = {
         "corpus_size": len(labels),
         "positives": sum(y_true),
         "negatives": clean_count,
+        "corpus_metadata": {
+            "source": "live inspect eval logs",
+            "conditions": conditions,
+            "models": sorted(models),
+            "labeller": labels[0].get("labeller") if labels else None,
+        },
         "deterministic": {
             "wall_seconds": round(det_seconds, 4),
             "ms_per_transcript": round((det_seconds / len(labels)) * 1000, 2),
