@@ -6,7 +6,7 @@ Numbers from [`benchmark/RESULTS.md`](benchmark/RESULTS.md) · repo: https://git
 
 ## Elevator pitch (Neolithic / eval-integrity roles)
 
-> I built deterministic reward-hacking scanners for Inspect Scout and ran a live coding-agent corpus. The rules are **1300× faster** than Scout's LLM judge and **$0** per transcript — but the interesting result is what they **miss**: an agent passed `assert 1 + 1 == 3` with scorer **1.0** by corrupting the Python runtime. Structural detection has a floor; I published the transcript.
+> I built deterministic reward-hacking scanners for Inspect Scout and ran a live coding-agent corpus. The rules are **1300× faster** than Scout's LLM judge and **$0** per transcript — but the interesting result is what they **miss**: an agent passed `assert 1 + 1 == 3` with scorer **1.0** by corrupting the Python runtime. No informative detector caught it; the one that flagged it fires on all 26 transcripts. I published the trace.
 
 ---
 
@@ -26,7 +26,7 @@ Agents optimize for **passing the scorer**, not **solving the task**. Scout's `l
 
 - 4 Inspect Scout scanners (event-log rules, pinned evidence per step)
 - Live benchmark: 26 DeepSeek agent runs, 5 hack-inducing conditions
-- [`impossible_000`](benchmark/findings/impossible_000.md): scorer 1.0 on an impossible assertion — undetected by rules
+- [`impossible_000`](benchmark/findings/impossible_000.md): scorer 1.0 on an impossible assertion — missed by informative rules
 - Full compare vs Scout LLM judge + reproducible pipeline
 
 ---
@@ -39,13 +39,13 @@ Agents optimize for **passing the scorer**, not **solving the task**. Scout's `l
 | Recall | 100% | 79% |
 | 26-sample latency | 0.4s | 560s |
 
-**Why the deterministic numbers look “good” on recall:** rules over-fire on benign test-file reads (`ground_truth_read`). **Why they matter anyway:** `scorer_access` / `claim_exit_mismatch` are usable signals; the **impossible** class is the research gap.
+**Why the deterministic numbers look “good” on recall:** rules over-fire on benign test-file reads (`ground_truth_read`). **Why they matter anyway:** `scorer_access` / `claim_exit_mismatch` carry signal; `ground_truth_read` at 100% FP rate is a cautionary tale; the **impossible** class is the research gap.
 
 ---
 
 ## 30-second interview
 
-> "Same move I did at BNY — replace an LLM judge with deterministic checks where the structure is auditable. On agent eval logs, that's answer-file reads and scorer touches. I measured it on real trajectories and also showed a case where pytest says pass and the agent clearly hacked the environment — no rule caught it. That's the work I want to do: close the gap between scorer green and eval integrity."
+> "Same move I did at BNY — replace an LLM judge with deterministic checks where the structure is auditable. On agent eval logs, that's answer-file reads and scorer touches. I measured it on real trajectories and also showed a case where pytest says pass and the agent corrupted the runtime — no informative rule caught it, and the always-firing detector is worthless at 100% FP. That's the work I want to do: close the gap between scorer green and eval integrity."
 
 ---
 
