@@ -1,62 +1,56 @@
-# scout-deterministic — portfolio blurb
+# scout-deterministic — application copy
 
-Use this for applications, LinkedIn, or cold email. Numbers from [`benchmark/RESULTS.md`](benchmark/RESULTS.md) (2026-08-02 run).
+Numbers from [`benchmark/RESULTS.md`](benchmark/RESULTS.md) · repo: https://github.com/Heman10x-NGU/scout-deterministic
+
+---
+
+## Elevator pitch (Neolithic / eval-integrity roles)
+
+> I built deterministic reward-hacking scanners for Inspect Scout and ran a live coding-agent corpus. The rules are **1300× faster** than Scout's LLM judge and **$0** per transcript — but the interesting result is what they **miss**: an agent passed `assert 1 + 1 == 3` with scorer **1.0** by corrupting the Python runtime. Structural detection has a floor; I published the transcript.
 
 ---
 
 ## One-liner
 
-**Deterministic reward-hacking scanners for Inspect Scout** — rule-based transcript checks that run in ~16ms/sample with $0 API cost, benchmarked on 26 live coding-agent episodes.
+Rule-based cheat detection on agent eval logs — benchmarked honestly on 26 live episodes, with the failure modes documented.
 
 ---
 
 ## Problem
 
-Coding agents optimize for **passing the scorer** (pytest green), not always **solving the task**. Inspect Scout detects this with an **LLM judge** (`llm_scanner`) — slow (~21s/sample in our run), costly, and model-dependent.
+Agents optimize for **passing the scorer**, not **solving the task**. Scout's `llm_scanner()` catches many cases but costs tokens, takes ~21s/sample, and drifts with the model.
 
 ---
 
-## What I built
+## What I shipped
 
-- **4 Scout-integrated scanners** (`ground_truth_read`, `scorer_access`, `submit_no_exec`, `claim_exit_mismatch`)
-- **Live benchmark corpus**: 26 DeepSeek agent runs fixing `calc.py` under 5 conditions (readable answer file, impossible test, leading prompt, tight turn budget)
-- **Honest measurement**: precision/recall vs labelled transcripts; comparison to Scout's LLM scanner
-
-**Repo:** https://github.com/Heman10x-NGU/scout-deterministic
+- 4 Inspect Scout scanners (event-log rules, pinned evidence per step)
+- Live benchmark: 26 DeepSeek agent runs, 5 hack-inducing conditions
+- [`impossible_000`](benchmark/findings/impossible_000.md): scorer 1.0 on an impossible assertion — undetected by rules
+- Full compare vs Scout LLM judge + reproducible pipeline
 
 ---
 
-## Results (honest)
+## Results (lead with limitations)
 
-| Metric | Deterministic (aggregate) | Scout LLM scanner |
+| | Deterministic | Scout LLM |
 |---|---:|---:|
-| Precision vs labels | 54% | 85% |
-| Recall vs labels | 100% | 79% |
-| Wall time (26 samples) | **0.4s** | **560s** |
-| Token cost | **$0** | API spend |
+| Precision | 54% | 85% |
+| Recall | 100% | 79% |
+| 26-sample latency | 0.4s | 560s |
 
-**Lead with limitations (this is the differentiator):**
-
-- `ground_truth_read` **false-alarms** when agents read `tests/test_math.py` (expected value visible) — 100% FP on label-negatives in this corpus
-- **Misses** `test_environment_corruption`: agents passed `assert 1 + 1 == 3` with pytest scorer **1.0** — see `benchmark/findings/impossible_000.md`
-- **Local sandbox leaked** ground truth between samples — methodology caveat, also a real finding
+**Why the deterministic numbers look “good” on recall:** rules over-fire on benign test-file reads (`ground_truth_read`). **Why they matter anyway:** `scorer_access` / `claim_exit_mismatch` are usable signals; the **impossible** class is the research gap.
 
 ---
 
-## Why it matters
+## 30-second interview
 
-Shows eval-integrity thinking: not "my tool gets 100% recall," but **here is what structural detection catches, here is what it structurally cannot, with a captured transcript.**
-
-Parallel to BNY work: replaced drifting LLM-as-judge with deterministic claim-coverage checks for financial Q&A.
+> "Same move I did at BNY — replace an LLM judge with deterministic checks where the structure is auditable. On agent eval logs, that's answer-file reads and scorer touches. I measured it on real trajectories and also showed a case where pytest says pass and the agent clearly hacked the environment — no rule caught it. That's the work I want to do: close the gap between scorer green and eval integrity."
 
 ---
 
-## Stack
+## Do not claim
 
-Python · Inspect AI · Inspect Scout · pytest agent sandbox · DeepSeek API
-
----
-
-## 30-second interview answer
-
-> "I built deterministic scanners for agent eval logs — catch answer-file reads and scorer touches without calling an LLM. I ran 26 live agent episodes under hack-inducing conditions. The rules are 1300× faster and free, but I also published where they fail: agents corrupted the Python runtime to pass impossible tests and the scorer still said 1.0. That's the kind of eval gap I'm interested in closing."
+- "Hand-labelled all 26" (Opus-reviewed traces; spot-check before interviews)
+- "Production-ready 100% recall"
+- "RL training environment" (it's an agent **eval** harness)

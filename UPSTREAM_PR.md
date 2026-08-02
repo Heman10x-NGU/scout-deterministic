@@ -1,7 +1,10 @@
-# Upstream PR — deterministic scanners for Inspect Scout
+# Proposed contribution to Inspect Scout (not yet submitted)
 
-**Target repo:** [meridianlabs-ai/inspect_scout](https://github.com/meridianlabs-ai/inspect_scout)  
-**Local clone:** `../inspect_Scout/inspect_scout/`
+**Target:** [meridianlabs-ai/inspect_scout](https://github.com/meridianlabs-ai/inspect_scout)
+
+This file is a **draft PR packet** for optional upstream merge. The main repo README links here; reviewers can ignore it unless they care about Scout integration.
+
+Reference implementations to copy: [`upstream/submit_no_exec_scanner.py`](upstream/submit_no_exec_scanner.py), [`upstream/ground_truth_read_scanner.py`](upstream/ground_truth_read_scanner.py).
 
 ## Proposed scanners (2)
 
