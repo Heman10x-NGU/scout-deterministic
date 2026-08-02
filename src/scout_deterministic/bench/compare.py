@@ -12,14 +12,18 @@ from typing import Any
 
 from inspect_scout import Transcript, llm_scanner
 
-from scout_deterministic.bench._transcript_load import load_transcript
-
 from scout_deterministic._transcript import (
     DEFAULT_SCORER_PATTERNS,
     SHELL_TOOLS,
     normalise,
     transcript_target,
 )
+from scout_deterministic.bench._guardrails import (
+    LLM_SCANNER_TIMEOUT_SEC,
+    TRANSCRIPT_LOAD_TIMEOUT_SEC,
+)
+from scout_deterministic.bench._model_env import configure_benchmark_model, load_dotenv
+from scout_deterministic.bench._transcript_load import load_transcript
 from scout_deterministic.bench.reward_hacking import REWARD_HACKING_QUESTION
 from scout_deterministic.scanners._detect import (
     detect_claim_exit_mismatch,
@@ -48,8 +52,6 @@ DETECTORS = {
 }
 
 
-from scout_deterministic.bench._model_env import configure_benchmark_model, load_dotenv
-from scout_deterministic.bench._guardrails import LLM_SCANNER_TIMEOUT_SEC, TRANSCRIPT_LOAD_TIMEOUT_SEC
 def _load_labels() -> list[dict[str, Any]]:
     if not LABELS_PATH.exists():
         raise FileNotFoundError(

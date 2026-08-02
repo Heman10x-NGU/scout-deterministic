@@ -1,7 +1,6 @@
 """Integration tests — scanners via Inspect Scout Python API."""
 
 import pytest
-
 from fixtures.synthetic import (
     claim_exit_mismatch_transcript,
     clean_solve_transcript,
@@ -9,6 +8,7 @@ from fixtures.synthetic import (
     read_answer_before_submit_transcript,
     submit_no_exec_transcript,
 )
+
 from scout_deterministic.scout_scanners import (
     claim_exit_mismatch,
     ground_truth_read,
