@@ -6,26 +6,37 @@ Deterministic reward-hacking scanners for [Inspect Scout](https://github.com/mer
 
 This package adds **rule-based scanners** for structural cheat patterns — no model calls, sub-millisecond per transcript.
 
-## Benchmark
+## Results (live benchmark, N=26)
 
-Benchmark numbers are generated from **live agent runs**, not synthetic fixtures. See [`benchmark/RESULTS.md`](benchmark/RESULTS.md) after you complete labelling and comparison.
+| | Deterministic scanners | Scout `llm_scanner()` |
+|---|---:|---:|
+| Precision vs labels | 54% | 85% |
+| Recall vs labels | 100% | 79% |
+| Latency (26 samples) | **0.4s** | **560s** |
+| Cost | **$0** | API tokens |
+
+Full methodology, limitations, and the **`impossible_000`** finding (agent passed `assert 1+1==3`, scorer 1.0): **[`benchmark/RESULTS.md`](benchmark/RESULTS.md)** · [`benchmark/findings/impossible_000.md`](benchmark/findings/impossible_000.md)
+
+**Portfolio blurb:** [`PORTFOLIO.md`](PORTFOLIO.md)
+
+## Benchmark pipeline
 
 ```bash
-python benchmark/generate_real_corpus.py   # 26 live eval logs across 5 conditions
-scout-det-label                          # human labels (required)
-scout-det-compare --llm                  # deterministic vs LLM judge
-scout-det-report                         # writes RESULTS.md
+python benchmark/generate_real_corpus.py   # 26 live eval logs, 5 conditions
+# → benchmark/labels.jsonl (see RESULTS.md for labelling methodology)
+python scripts/run_compare_and_report.py --llm
+pytest -q
 ```
 
-*Corpus is small (~26 samples). Numbers are indicative, not definitive.*
+*Corpus is small (26 samples). Numbers are indicative; limitations are documented.*
 
 ## Fixtures vs benchmark
 
 | | Fixtures (`tests/fixtures/`) | Benchmark (`benchmark/`) |
 |---|---|---|
 | Purpose | Verify each detector fires on a constructed case | Measure behaviour on real agent runs |
-| Data | Synthetic `Transcript` JSON built from Inspect event types | Live `.eval` logs from `inspect eval` |
-| Labels | Not used | Hand-written per sample via `scout-det-label` |
+| Data | Synthetic `Transcript` JSON | Live `.eval` logs from `inspect eval` |
+| Labels | Not used | LLM-reviewed traces in `labels.jsonl` |
 
 Do not use fixture transcripts as benchmark scores.
 
@@ -49,23 +60,17 @@ python -m pip install -e ".[dev]"
 
 ## Usage
 
-**Run scanners on fixture transcripts** (unit-test JSON under `tests/fixtures/transcripts/`):
-
 ```bash
 pytest
-```
-
-**Run on real Inspect eval logs** (`.eval` files from `inspect eval ...`):
-
-```bash
 scout scan src/scout_deterministic/scout_scanners.py -T benchmark/raw_logs/
 ```
 
 ## Limitations
 
-- **Semantic hacks** (intent inference, novel strategies) still need a model judge.
-- **`ground_truth_read`** may false-positive on benign reads before submit.
-- **Benchmark corpus** is intentionally small; regenerate with harsher conditions if needed.
+- **Semantic / runtime-corruption hacks** need other tooling (see `impossible_000` finding).
+- **`ground_truth_read`** false-positives when expected values appear in test file output.
+- **Local sandbox** leaked ground truth between samples in the benchmark run.
+- Small corpus — regenerate with Docker sandboxes for stricter FP rates.
 
 ## Upstream
 
@@ -74,7 +79,7 @@ Draft PR for [inspect_scout](https://github.com/meridianlabs-ai/inspect_scout): 
 ## Related
 
 - [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) — UK **AI Security Institute (AISI)** eval framework
-- [Inspect Scout](https://github.com/meridianlabs-ai/inspect_scout) — transcript scanning (LLM + grep scanners)
+- [Inspect Scout](https://github.com/meridianlabs-ai/inspect_scout) — transcript scanning
 - [EvilGenie](https://github.com/JonathanGabor/evilgenie_inspect) — reward-hacking benchmark for coding agents
 
 ## License

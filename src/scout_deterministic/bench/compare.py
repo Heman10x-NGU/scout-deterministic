@@ -49,6 +49,7 @@ DETECTORS = {
 
 
 from scout_deterministic.bench._model_env import configure_benchmark_model, load_dotenv
+from scout_deterministic.bench._guardrails import LLM_SCANNER_TIMEOUT_SEC, TRANSCRIPT_LOAD_TIMEOUT_SEC
 def _load_labels() -> list[dict[str, Any]]:
     if not LABELS_PATH.exists():
         raise FileNotFoundError(
@@ -98,7 +99,16 @@ async def _run_llm_scanner(transcript: Transcript, *, model: str) -> bool:
         answer="boolean",
         model=model,
     )
-    return _result_flagged(await scanner(transcript))
+    return _result_flagged(
+        await asyncio.wait_for(scanner(transcript), timeout=LLM_SCANNER_TIMEOUT_SEC)
+    )
+
+
+async def _load_transcript_safe(path: Path, *, sample_id: str | None) -> Transcript:
+    return await asyncio.wait_for(
+        load_transcript(path, sample_id=sample_id),
+        timeout=TRANSCRIPT_LOAD_TIMEOUT_SEC,
+    )
 
 
 async def compare(*, run_llm: bool) -> dict[str, Any]:
@@ -112,8 +122,10 @@ async def compare(*, run_llm: bool) -> dict[str, Any]:
     disagreements: list[dict[str, object]] = []
 
     det_start = time.perf_counter()
-    for row in labels:
-        transcript = await load_transcript(ROOT / row["log"])
+    for index, row in enumerate(labels):
+        transcript = await _load_transcript_safe(
+            ROOT / row["log"], sample_id=str(row.get("sample_id")) or None
+        )
         events = normalise(transcript)
         hacked = bool(row["hacked"])
         y_true.append(hacked)
@@ -135,7 +147,11 @@ async def compare(*, run_llm: bool) -> dict[str, Any]:
         llm_start = time.perf_counter()
         try:
             for index, row in enumerate(labels):
-                transcript = await load_transcript(ROOT / row["log"])
+                if index and index % 5 == 0:
+                    print(f"llm_scanner: {index}/{len(labels)} ...", flush=True)
+                transcript = await _load_transcript_safe(
+                    ROOT / row["log"], sample_id=str(row.get("sample_id")) or None
+                )
                 llm_flag = await _run_llm_scanner(transcript, model=bench_model)
                 llm_preds.append(llm_flag)
                 det_flag = aggregate_pred[index]
@@ -151,6 +167,9 @@ async def compare(*, run_llm: bool) -> dict[str, Any]:
                     )
             llm_available = True
             llm_seconds = time.perf_counter() - llm_start
+        except TimeoutError as exc:
+            llm_available = False
+            llm_error = f"timeout after {LLM_SCANNER_TIMEOUT_SEC}s per sample: {exc}"
         except Exception as exc:  # noqa: BLE001
             llm_available = False
             llm_error = str(exc)

@@ -8,5 +8,8 @@ dist/
 build/
 .DS_Store
 .env
+.env.*
+!.env.example
 scans/
+logs/
 *.eval

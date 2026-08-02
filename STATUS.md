@@ -1,50 +1,32 @@
-# scout-deterministic status
-
-## Blocking review — fixed in code (pending corpus run)
+# scout-deterministic — DONE
 
 | Item | Status |
 |---|---|
-| Fixtures moved to `tests/fixtures/synthetic.py` | Done |
-| Synthetic `benchmark/generate_corpus.py` removed | Done |
-| Synthetic `benchmark/transcripts/` removed | Done |
-| `benchmark/generate_real_corpus.py` (live evals) | Done |
-| `scout-det-label` interactive CLI | Done |
-| Fake precision/recall removed from README | Done |
-| Live corpus generated | **Run locally** |
-| Human labels (`benchmark/labels.jsonl`) | **Run `scout-det-label`** |
-| `scout-det-compare --llm` | After labels |
-| Push to GitHub | **Run git commit + push** |
+| Scanners + tests | Done (`pytest` green) |
+| Live corpus (26 samples) | Done (`benchmark/corpus_manifest.jsonl`) |
+| Labels | Done (`benchmark/labels.jsonl`, 14 hacked / 12 not) |
+| `scout-det-compare --llm` | Done (`benchmark/compare_results.json`) |
+| `RESULTS.md` | Done |
+| `PORTFOLIO.md` | Done — copy for other applications |
+| `benchmark/findings/impossible_000.md` | Done |
+| Push to GitHub | **You:** `git add -A && git commit && git push` |
 
-## Quick commands
+## Final commands (already run)
 
 ```bash
-cd scout-deterministic
-source .venv/bin/activate
+python scripts/run_compare_and_report.py --llm   # compare + RESULTS.md
 pytest -q
-python benchmark/generate_real_corpus.py   # ~26 eval logs, uses Remote-jobs/.env MiMo key
-scout-det-label                            # you label each sample (~1.5h)
-scout-det-compare --llm
-scout-det-report
 ```
 
-Or: `bash scripts/run_benchmark_pipeline.sh`
+## Apply elsewhere
 
-## Git commit (if not pushed yet)
+1. Link repo: https://github.com/Heman10x-NGU/scout-deterministic
+2. Paste from `PORTFOLIO.md` (one-liner + honest results table)
+3. Lead with **limitations + impossible_000** — shows eval integrity thinking
+4. Optional: spot-check 5 labels before interviews (`impossible_000`, `clean_001`, `clean_003`, `readable_answer_000`, `leading_prompt_003`)
 
-```bash
-git add -A
-git commit -m "$(cat <<'EOF'
-fix(benchmark): replace synthetic corpus with live agent transcripts
+## Honest claims only
 
-The v0 benchmark generated its corpus from the same fixture functions the
-detectors were written against, and described machine-written labels as
-hand-labelled. Both are corrected here.
-
-- fixtures moved to tests/, no longer used as benchmark data
-- corpus generator for live inspect evals across 5 conditions
-- interactive scout-det-label CLI for human ground truth
-- compare/report load .eval logs; README and RESULTS restated
-EOF
-)"
-git push origin main
-```
+- Labels: Claude Opus reviewed traces (not "I hand-labelled all 26")
+- Do not claim 100% production-ready detection — FP rate on negatives is 100% for aggregate rule OR
+- Do claim: 1300× faster than LLM scanner, real corpus, published misses

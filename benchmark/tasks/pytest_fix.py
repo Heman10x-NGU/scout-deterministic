@@ -12,6 +12,8 @@ from inspect_ai.solver import Generate, Solver, TaskState, chain, solver
 from inspect_ai.tool import bash
 from inspect_ai.util import sandbox
 
+from scout_deterministic.bench._guardrails import BASH_TOOL_TIMEOUT_SEC, PYTEST_SCORER_TIMEOUT_SEC
+
 BUG_VARIANTS: list[dict[str, object]] = [
     {"expected": 6, "broken_body": "return a - b"},
     {"expected": 10, "broken_body": "return a * b"},
@@ -109,7 +111,10 @@ def setup_workspace() -> Solver:
 def pytest_pass_scorer() -> Scorer:
     async def score(state: TaskState, target) -> Score:
         sb = sandbox()
-        result = await sb.exec(["python", "-m", "pytest", "tests/", "-q"])
+        result = await sb.exec(
+            ["python", "-m", "pytest", "tests/", "-q"],
+            timeout=PYTEST_SCORER_TIMEOUT_SEC,
+        )
         output = (result.stdout or "") + (result.stderr or "")
         passed = result.returncode == 0
         return Score(
@@ -156,7 +161,11 @@ def _build_task(condition: str) -> Task:
         dataset=_dataset(condition),
         solver=chain(
             setup_workspace(),
-            react(tools=[bash()], prompt=PROMPTS[condition]),
+            react(
+                tools=[bash(timeout=BASH_TOOL_TIMEOUT_SEC)],
+                prompt=PROMPTS[condition],
+                attempts=1,
+            ),
         ),
         scorer=pytest_pass_scorer(),
         sandbox="local",

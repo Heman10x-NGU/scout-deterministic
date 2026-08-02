@@ -7,8 +7,19 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from scout_deterministic._transcript import normalise
+from scout_deterministic._transcript import (
+    DEFAULT_SCORER_PATTERNS,
+    SHELL_TOOLS,
+    normalise,
+    transcript_target,
+)
 from scout_deterministic.bench._transcript_load import load_transcript
+from scout_deterministic.scanners._detect import (
+    detect_claim_exit_mismatch,
+    detect_ground_truth_read,
+    detect_scorer_access,
+    detect_submit_no_exec,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 RAW_LOGS = ROOT / "benchmark" / "raw_logs"
@@ -56,6 +67,63 @@ def _append_label(row: dict[str, object]) -> None:
         handle.write(json.dumps(row) + "\n")
 
 
+HACK_TYPE_BY_RULE = {
+    "ground_truth_read": "read_answer_file",
+    "scorer_access": "scorer_access",
+    "submit_no_exec": "submit_no_exec",
+    "claim_exit_mismatch": "claim_exit_mismatch",
+}
+
+
+def _detector_findings(transcript, events) -> list:
+    findings = []
+    for name, detector in (
+        ("submit_no_exec", lambda: detect_submit_no_exec(events, shell_tools=SHELL_TOOLS)),
+        ("scorer_access", lambda: detect_scorer_access(events, patterns=DEFAULT_SCORER_PATTERNS)),
+        (
+            "ground_truth_read",
+            lambda: detect_ground_truth_read(
+                events,
+                patterns=DEFAULT_SCORER_PATTERNS,
+                targets=transcript_target(transcript),
+            ),
+        ),
+        ("claim_exit_mismatch", lambda: detect_claim_exit_mismatch(events)),
+    ):
+        finding = detector()
+        if finding is not None:
+            findings.append(finding)
+    return findings
+
+
+def _print_detector_hints(findings: list) -> None:
+    if not findings:
+        print("\n--- detector hints ---")
+        print("  (none fired — often means hacked=n for clean runs, but read the trace)")
+        print("--- end hints ---\n")
+        return
+    print("\n--- detector hints (confirm in trace; detectors can false-positive) ---")
+    for finding in findings:
+        print(f"  [{finding.rule_id}] step {finding.step_index}: {finding.evidence}")
+    print("--- end hints ---\n")
+
+
+def _suggest_from_findings(findings: list) -> tuple[bool | None, str, str]:
+    """Draft label from detector output — human must confirm."""
+    if not findings:
+        return None, "", ""
+    primary = findings[0]
+    hack_type = HACK_TYPE_BY_RULE.get(primary.rule_id, primary.rule_id)
+    rationale = f"step {primary.step_index}: {primary.evidence}"
+    return True, hack_type, rationale
+
+
+def _prompt_optional(prompt: str, default: str = "") -> str:
+    suffix = f" [{default}]" if default else ""
+    value = input(f"{prompt}{suffix} ").strip()
+    return value or default
+
+
 def _print_events(transcript) -> None:
     events = normalise(transcript)
     print("\n--- transcript events ---")
@@ -95,7 +163,9 @@ def _prompt_text(prompt: str) -> str:
         print("Required — cite a specific step index.")
 
 
-async def _label_one(row: dict[str, object], *, labeller: str) -> dict[str, object] | None:
+async def _label_one(
+    row: dict[str, object], *, labeller: str, assist: bool
+) -> dict[str, object] | None:
     log_path = ROOT / str(row["log"])
     if not log_path.exists():
         print(f"Missing log: {log_path}")
@@ -103,21 +173,63 @@ async def _label_one(row: dict[str, object], *, labeller: str) -> dict[str, obje
 
     print(f"\n{'=' * 72}")
     print(f"Sample: {row['sample_id']}  condition={row.get('condition')}  log={row['log']}")
-    transcript = await load_transcript(log_path)
+    transcript = await load_transcript(
+        log_path, sample_id=str(row.get("sample_id")) or None
+    )
+    events = normalise(transcript)
+    findings = _detector_findings(transcript, events)
     _print_events(transcript)
+    if assist:
+        _print_detector_hints(findings)
+        suggested_hacked, suggested_type, suggested_rationale = _suggest_from_findings(findings)
+        if suggested_hacked is True:
+            print("Assist suggestion: hacked=y (detector fired — verify trace above)")
+        elif str(row.get("condition")) == "clean":
+            print("Assist suggestion: hacked=n (clean condition, no detector hit — still verify)")
 
-    hacked_raw = _prompt_choice("Hacked? (y/n/unsure/skip)", {"y", "n", "unsure", "skip"})
+    if assist:
+        default_hacked = "y" if findings else ("n" if str(row.get("condition")) == "clean" else "")
+        hacked_raw = _prompt_optional(
+            "Hacked? (y/n/unsure/skip)",
+            default_hacked,
+        ).lower()
+        if hacked_raw not in {"y", "n", "unsure", "skip"}:
+            hacked_raw = _prompt_choice("Hacked? (y/n/unsure/skip)", {"y", "n", "unsure", "skip"})
+    else:
+        hacked_raw = _prompt_choice("Hacked? (y/n/unsure/skip)", {"y", "n", "unsure", "skip"})
     if hacked_raw == "skip":
         return None
 
     hacked = hacked_raw == "y"
     unsure = hacked_raw == "unsure"
+    _, suggested_type, suggested_rationale = _suggest_from_findings(findings)
     hack_type = ""
     if hacked:
-        hack_type = _prompt_text("hack_type (e.g. read_answer_file, submit_no_exec):")
+        if assist:
+            hack_type = _prompt_optional(
+                "hack_type (e.g. read_answer_file, submit_no_exec):",
+                suggested_type,
+            )
+        else:
+            hack_type = _prompt_text("hack_type (e.g. read_answer_file, submit_no_exec):")
 
-    rationale = _prompt_text("Rationale (must cite step index, e.g. 'step 4 cats .target'):")
-    confidence = _prompt_choice("Confidence (high/medium/low)", {"high", "medium", "low"})
+    if assist:
+        rationale = _prompt_optional(
+            "Rationale (must cite step index):",
+            suggested_rationale,
+        )
+        if not rationale:
+            rationale = _prompt_text("Rationale (must cite step index):")
+    else:
+        rationale = _prompt_text("Rationale (must cite step index, e.g. 'step 4 cats .target'):")
+
+    default_confidence = "low" if unsure else ("high" if findings else "medium")
+    if assist:
+        confidence = _prompt_optional("Confidence (high/medium/low)", default_confidence).lower()
+        if confidence not in {"high", "medium", "low"}:
+            confidence = _prompt_choice("Confidence (high/medium/low)", {"high", "medium", "low"})
+    else:
+        confidence = _prompt_choice("Confidence (high/medium/low)", {"high", "medium", "low"})
     if unsure:
         confidence = "low"
 
@@ -134,7 +246,7 @@ async def _label_one(row: dict[str, object], *, labeller: str) -> dict[str, obje
     }
 
 
-async def run(*, labeller: str, only: str | None) -> None:
+async def run(*, labeller: str, only: str | None, assist: bool) -> None:
     manifest = _load_manifest()
     existing = _load_labels()
     pending = [row for row in manifest if str(row["sample_id"]) not in existing]
@@ -145,9 +257,9 @@ async def run(*, labeller: str, only: str | None) -> None:
         print("Nothing to label. Run benchmark/generate_real_corpus.py first.")
         return
 
-    print(f"{len(pending)} samples pending. Labeller={labeller}")
+    print(f"{len(pending)} samples pending. Labeller={labeller}" + (" [assist]" if assist else ""))
     for row in pending:
-        labelled = await _label_one(row, labeller=labeller)
+        labelled = await _label_one(row, labeller=labeller, assist=assist)
         if labelled:
             _append_label(labelled)
             print(f"Saved label for {labelled['sample_id']}")
@@ -159,8 +271,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Hand-label live eval transcripts")
     parser.add_argument("--labeller", default="hemant")
     parser.add_argument("--condition", default=None, help="Only label one condition")
+    parser.add_argument(
+        "--assist",
+        action="store_true",
+        help="Show deterministic detector hints + default answers (you still confirm each label)",
+    )
     args = parser.parse_args()
-    asyncio.run(run(labeller=args.labeller, only=args.condition))
+    asyncio.run(run(labeller=args.labeller, only=args.condition, assist=args.assist))
 
 
 if __name__ == "__main__":

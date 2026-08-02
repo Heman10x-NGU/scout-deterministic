@@ -13,11 +13,11 @@ SCOUT_BENCH_MODEL_ENV = "SCOUT_BENCH_MODEL"
 
 
 def load_dotenv() -> None:
-    for candidate in (
-        ROOT / ".env",
-        ROOT.parents[3] / ".env",  # Remote-jobs/.env
-        Path.home() / ".hermes" / ".env",
-    ):
+    candidates = [ROOT / ".env", Path.home() / ".hermes" / ".env"]
+    extra = os.environ.get("SCOUT_DOTENV_PATH")
+    if extra:
+        candidates.insert(1, Path(extra).expanduser())
+    for candidate in candidates:
         if not candidate.exists():
             continue
         for line in candidate.read_text(encoding="utf-8").splitlines():
@@ -27,8 +27,9 @@ def load_dotenv() -> None:
             key, _, value = line.partition("=")
             key = key.strip()
             value = value.strip().strip('"').strip("'")
-            if key and value and key not in os.environ:
-                os.environ[key] = value
+            if key and value:
+                if key.startswith("DEEPSEEK_") or key not in os.environ:
+                    os.environ[key] = value
 
 
 def _normalise_openai_base(url: str) -> str:
@@ -53,7 +54,7 @@ def configure_benchmark_model(explicit: str | None = None) -> str:
     if not os.environ.get("OPENAI_API_KEY") and not os.environ.get("INSPECT_API_KEY"):
         raise SystemExit(
             "No API key found. Set DEEPSEEK_API_KEY (preferred) or OPENAI_API_KEY in "
-            "scout-deterministic/.env or Remote-jobs/.env"
+            "scout-deterministic/.env (or SCOUT_DOTENV_PATH)"
         )
 
     rank_model = os.environ.get("RANK_MODEL", "gpt-4o-mini")
